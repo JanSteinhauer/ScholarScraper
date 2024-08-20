@@ -1,6 +1,7 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
+const XLSX = require('xlsx');
 
 (async () => {
     const browser = await puppeteer.launch({ headless: false });
@@ -73,12 +74,18 @@ const path = require('path');
         }
     }
 
-    // Save the data to a JSON file
-    const filePath = path.join(__dirname, 'scholarships.json');
-    fs.writeFileSync(filePath, JSON.stringify(allScholarships, null, 2));
+    // Close the browser
+    await browser.close();
+
+    // Convert the data to an Excel file
+    const worksheet = XLSX.utils.json_to_sheet(allScholarships);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Scholarships');
+
+    // Save the file
+    const filePath = path.join(__dirname, 'scholarships.xlsx');
+    XLSX.writeFile(workbook, filePath);
 
     console.log(`Scraped ${allScholarships.length} scholarships`);
     console.log(`Data saved to ${filePath}`);
-
-    await browser.close();
 })();
