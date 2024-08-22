@@ -13,7 +13,6 @@ const XLSX = require('xlsx');
     let allScholarships = [];
 
     const getImageUrl = (amount) => {
-        // Mapping specific amounts to image URLs
         if (amount === '1000') {
             return 'https://example.com/images/1000.png';
         } else if (amount === '2000') {
@@ -37,7 +36,6 @@ const XLSX = require('xlsx');
             await page.goto(link, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
             const scholarship = await page.evaluate(() => {
-                // Redefine the getImageUrl function inside evaluate
                 const getImageUrl = (amount) => {
                     if (amount === '1000') {
                         return 'https://example.com/images/1000.png';
@@ -52,7 +50,23 @@ const XLSX = require('xlsx');
 
                 const name = document.querySelector('h1')?.innerText.trim();
                 const amountText = document.querySelector('.award_value h6')?.innerText.trim();
-                let deadline = document.querySelector('.sh_left h6')?.innerText.trim();
+
+                // Select the span that contains the ⏳ emoji
+                let deadlineElement = Array.from(document.querySelectorAll('.pp-content-grid-post-meta span'))
+                    .find(el => el.innerText.includes('⏳'))?.innerText.trim();
+
+                if (deadlineElement) {
+                    // Extract the MM/YY part and convert it to MM/01/YYYY
+                    const deadlineMatch = deadlineElement.match(/(\d{2})\/(\d{2})/);
+                    if (deadlineMatch) {
+                        const month = deadlineMatch[1];
+                        const year = `20${deadlineMatch[2]}`; // Assuming 20XX for the year
+                        deadlineElement = `${month}/01/${year}`;
+                    } else {
+                        deadlineElement = 'N/a';
+                    }
+                }
+
                 const description = document.querySelector('.sh_left p')?.innerText.trim();
                 const applyLink = document.querySelector('a.btn_apply.ajax_apply')?.href;
 
@@ -79,27 +93,17 @@ const XLSX = require('xlsx');
 
                 const noEssayOrGPA = document.body.innerText.includes("no essay or minimum GPA required");
 
-                // Extract numeric value from amountText
                 const amount = amountText ? amountText.replace(/[^0-9]/g, '') : '';
 
-                // Determine if an essay or GPA requirement is mentioned
                 const isEssayRequired = noEssayOrGPA ? 0 : 1;
                 const isGPARequired = noEssayOrGPA ? 0 : 1;
-
-                // Format deadline
-                console.log("deadline1", deadline);
-                if (deadline && deadline.match(/^\d{2}\/\d{2}$/)) {
-                    console.log("deadline", deadline);
-                    const [month, day] = deadline.split('/');
-                    deadline = `${month}/01/2025`; // Assuming all deadlines are for the year 2025
-                }
 
                 const imageUrl = getImageUrl(amount);
 
                 return {
                     ScholarshipName: name || '',
                     amount: amount || '0',
-                    ApplicationDeadline: deadline || 'Deadline not specified',
+                    ApplicationDeadline: deadlineElement || 'Deadline not specified',
                     Description: description || 'No description available',
                     EligibilityRequirements: eligibility.join(', ') || 'Eligibility not specified',
                     ApplicationRequirements: applicationReqs.join(', ') || 'Requirements not specified',
